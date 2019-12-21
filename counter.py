@@ -10,26 +10,26 @@ height = 0
 entranceCounter = 0
 exitCounter = 0
 minContourArea = 3000  #Adjust this value according to your usage
-binarizationThreshold = 70  #Adjust this value according to your usage
-offsetRefLines = 200  # From center of frame
-pixelTolerance = 4 # Tolerance zone width(/2) in pixels
-coordYEntranceLine = 0
-coordYExitLine = 0
+binarizationThreshold = 55  #Adjust this value according to your usage
+offsetRefLines = 260  # From center of frame
+pixelTolerance = 3 # Tolerance zone width(/2) in pixels
+coordXEntranceLine = 0
+coordXExitLine = 0
 
 #Check if an object in entering in monitored zone
-def CheckEntranceLineCrossing(y, coordYEntranceLine, coordYExitLine):
-    absDistance = abs(y - coordYEntranceLine)    
+def CheckEntranceLineCrossing(x, coordXEntranceLine, coordXExitLine):
+    absDistance = abs(x - coordXEntranceLine)    
 
-    if ((absDistance <= pixelTolerance) and (y < coordYExitLine)):
+    if ((absDistance <= pixelTolerance) and (x < coordXExitLine)):
         return 1
     else:
         return 0
 
 #Check if an object in exiting from monitored zone
-def CheckExitLineCrossing(y, coordYEntranceLine, coordYExitLine):
-    absDistance = abs(y - coordYExitLine)    
+def CheckExitLineCrossing(x, coordXEntranceLine, coordXExitLine):
+    absDistance = abs(x - coordXExitLine)    
 
-    if ((absDistance <= pixelTolerance) and (y > coordYEntranceLine)):
+    if ((absDistance <= pixelTolerance) and (x > coordXEntranceLine)):
         return 1
     else:
         return 0
@@ -50,8 +50,8 @@ for i in range(0,20):
     width = np.size(frame,1)
     
     #refline positions (rounded to get int value)
-    coordYEntranceLine = round((height / 2) - offsetRefLines) 
-    coordYExitLine = round((height / 2) + offsetRefLines)
+    coordXEntranceLine = round((width / 2) - offsetRefLines) 
+    coordXExitLine = round((width / 2) + offsetRefLines)
 
 while True:    
     (grabbed, frame) = camera.read()
@@ -80,8 +80,8 @@ while True:
     qtyOfContours = 0
 
     #plot reference lines (entrance and exit lines) 
-    cv2.line(frameThresh, (0,coordYEntranceLine), (width,coordYEntranceLine), (255, 0, 0), 2)
-    cv2.line(frameThresh, (0,coordYExitLine), (width,coordYExitLine), (255, 0, 0), 2)
+    cv2.line(frameThresh, (coordXEntranceLine,0), (coordXEntranceLine,height), (255, 0, 0), 2)
+    cv2.line(frameThresh, (coordXExitLine,0), (coordXExitLine,height), (255, 0, 0), 2)
 
     #check all found contours
     for c in cnts:
@@ -98,13 +98,12 @@ while True:
         #find object's centroid (rounded to get int value)
         coordXCentroid = round(x+w/2)
         coordYCentroid = round(y+h/2)
-        ObjectCentroid = (coordXCentroid, coordYCentroid)
-        cv2.circle(frameThresh, ObjectCentroid, 1, (255, 255, 255), 5)
+        cv2.circle(frameThresh, (coordXCentroid, coordYCentroid), 1, (255, 255, 255), 5)
         
-        if (CheckEntranceLineCrossing(coordYCentroid,coordYEntranceLine,coordYExitLine)):
+        if (CheckEntranceLineCrossing(coordXCentroid,coordXEntranceLine,coordXExitLine)):
             entranceCounter += 1
 
-        if (CheckExitLineCrossing(coordYCentroid,coordYEntranceLine,coordYExitLine)):  
+        if (CheckExitLineCrossing(coordXCentroid,coordXEntranceLine,coordXExitLine)):  
             exitCounter += 1
 
     print ("Total contours found: " + str(qtyOfContours))
@@ -114,7 +113,8 @@ while True:
                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (250, 0, 1), 2)
     cv2.putText(frameThresh, "Exits: {}".format(str(exitCounter)), (10, 70),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (250, 0, 1), 2)
-    cv2.imshow("Original frame", frameThresh)
+    cv2.imshow("Background substracted image", frameThresh)
+    #cv2.imshow("Original frame", frame)
     cv2.waitKey(1);
 
 
