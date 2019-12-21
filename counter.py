@@ -3,131 +3,111 @@ import math
 import cv2
 import numpy as np
 
-#variaveis globais
+#global variables
 width = 0
 height = 0
-ContadorEntradas = 0
-ContadorSaidas = 0
-AreaContornoLimiteMin = 3000  #este valor eh empirico. Ajuste-o conforme sua necessidade 
-ThresholdBinarizacao = 70  #este valor eh empirico, Ajuste-o conforme sua necessidade
-OffsetLinhasRef = 150  #este valor eh empirico. Ajuste- conforme sua necessidade.
+EntranceCounter = 0
+ExitCounter = 0
+MinCountourArea = 3000  #Adjust this value according to your usage
+BinarizationThreshold = 70  #Adjust this value according to your usage
+OffsetRefLines = 150  #Adjust this value according to your usage
 
-#Verifica se o corpo detectado esta entrando da sona monitorada
-def TestaInterseccaoEntrada(y, CoordenadaYLinhaEntrada, CoordenadaYLinhaSaida):
-        DiferencaAbsoluta = abs(y - CoordenadaYLinhaEntrada)	
+#Check if an object in entering in monitored zone
+def CheckEntranceLineCrossing(y, CoorYEntranceLine, CoorYExitLine):
+  AbsDistance = abs(y - CoorYEntranceLine)    
 
-        if ((DiferencaAbsoluta <= 2) and (y < CoordenadaYLinhaSaida)):
-		return 1
-	else:
-		return 0
+    if  ((AbsDistance <= 2) and (y < CoorYExitLine)):
+          return 1
+    else:
+        return 0
 
-#Verifica se o corpo detectado esta saindo da sona monitorada
-def TestaInterseccaoSaida(y, CoordenadaYLinhaEntrada, CoordenadaYLinhaSaida):
-        DiferencaAbsoluta = abs(y - CoordenadaYLinhaSaida)	
+#Check if an object in exitting from monitored zone
+def CheckExitLineCrossing(y, CoorYEntranceLine, CoorYExitLine):
+    AbsDistance = abs(y - CoorYExitLine)    
 
-	if ((DiferencaAbsoluta <= 2) and (y > CoordenadaYLinhaEntrada)):
-		return 1
-	else:
-		return 0
+    if ((AbsDistance <= 2) and (y > CoorYEntranceLine)):
+        return 1
+    else:
+        return 0
 
 camera = cv2.VideoCapture(0)
 
-#forca a camera a ter resolucao 640x480
+#force 640x480 webcam resolution
 camera.set(3,640)
 camera.set(4,480)
 
-PrimeiroFrame = None
+ReferenceFrame = None
 
-#faz algumas leituras de frames antes de consierar a analise
-#motivo: algumas camera podem demorar mais para se "acosumar a luminosidade" quando ligam, capturando frames consecutivos com muita variacao de luminosidade. Para nao levar este efeito ao processamento de imagem, capturas sucessivas sao feitas fora do processamento da imagem, dando tempo para a camera "se acostumar" a luminosidade do ambiente
-
+#The webcam maybe get some time / captured frames to adapt to ambience lighting. For this reason, some frames are grabbed and discarted.
 for i in range(0,20):
     (grabbed, Frame) = camera.read()
 
-while True:
-    #le primeiro frame e determina resolucao da imagem
+while True:    
     (grabbed, Frame) = camera.read()
     height = np.size(Frame,0)
     width = np.size(Frame,1)
 
-    #se nao foi possivel obter frame, nada mais deve ser feito
+    #if cannot grab a frame, this program ends here.
     if not grabbed:
         break
 
-    #converte frame para escala de cinza e aplica efeito blur (para realcar os contornos)
-    FrameGray = cv2.cvtColor(Frame, cv2.COLOR_BGR2GRAY)
-    FrameGray = cv2.GaussianBlur(FrameGray, (21, 21), 0)
-
-    #como a comparacao eh feita entre duas imagens subsequentes, se o primeiro frame eh nulo (ou seja, primeira "passada" no loop), este eh inicializado
-    if PrimeiroFrame is None:
-        PrimeiroFrame = FrameGray
+    #gray-scale convertion and Gaussian blur filter applying
+    GrayFrame = cv2.cvtColor(Frame, cv2.COLOR_BGR2GRAY)
+    GrayFrame = cv2.GaussianBlur(GrayFrame, (21, 21), 0)
+    
+    if ReferenceFrame is None:
+        ReferenceFrame = GrayFrame
         continue
 
-    #ontem diferenca absoluta entre frame inicial e frame atual (subtracao de background)
-    #alem disso, faz a binarizacao do frame com background subtraido 
-    FrameDelta = cv2.absdiff(PrimeiroFrame, FrameGray)
-    FrameThresh = cv2.threshold(FrameDelta, ThresholdBinarizacao, 255, cv2.THRESH_BINARY)[1]
+    #Background subtraction and image binarization
+    FrameDelta = cv2.absdiff(ReferenceFrame, GrayFrame)
+    FrameThresh = cv2.threshold(FrameDelta, BinarizationThreshold, 255, cv2.THRESH_BINARY)[1]
     
-    #faz a dilatacao do frame binarizado, com finalidade de elimunar "buracos" / zonas brancas dentro de contornos detectados. 
-    #Dessa forma, objetos detectados serao considerados uma "massa" de cor preta 
-    #Alem disso, encontra os contornos apos dilatacao.
+    #Dilate image and find all the contours
     FrameThresh = cv2.dilate(FrameThresh, None, iterations=2)
     _, cnts, _ = cv2.findContours(FrameThresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    QtdeContornos = 0
+    QttyOfContours = 0
 
-    #desenha linhas de referencia 
-    CoordenadaYLinhaEntrada = (height / 2)-OffsetLinhasRef
-    CoordenadaYLinhaSaida = (height / 2)+OffsetLinhasRef
-    cv2.line(Frame, (0,CoordenadaYLinhaEntrada), (width,CoordenadaYLinhaEntrada), (255, 0, 0), 2)
-    cv2.line(Frame, (0,CoordenadaYLinhaSaida), (width,CoordenadaYLinhaSaida), (0, 0, 255), 2)
+    #plot reference lines (entrance and exit lines) 
+    CoorYEntranceLine = (height / 2)-OffsetRefLines
+    CoorYExitLine = (height / 2)+OffsetRefLines
+    cv2.line(Frame, (0,CoorYEntranceLine), (width,CoorYEntranceLine), (255, 0, 0), 2)
+    cv2.line(Frame, (0,CoorYExitLine), (width,CoorYExitLine), (0, 0, 255), 2)
 
 
-    #Varre todos os contornos encontrados
+    #check all found countours
     for c in cnts:
-        #contornos de area muto pequena sao ignorados.
-        if cv2.contourArea(c) < AreaContornoLimiteMin:
+        #if a contour has small area, it'll be ignored
+        if cv2.contourArea(c) < MinCountourArea:
             continue
 
-        #Para fins de depuracao, contabiliza numero de contornos encontrados
-        QtdeContornos = QtdeContornos+1    
+        QttyOfContours = QttyOfContours+1    
 
-        #obtem coordenadas do contorno (na verdade, de um retangulo que consegue abrangir todo ocontorno) e
-        #realca o contorno com um retangulo.
-        (x, y, w, h) = cv2.boundingRect(c) #x e y: coordenadas do vertice superior esquerdo
-                                           #w e h: respectivamente largura e altura do retangulo
-
+        #draw an rectangle "around" the object
+        (x, y, w, h) = cv2.boundingRect(c)
         cv2.rectangle(Frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-        #determina o ponto central do contorno e desenha um circulo para indicar
-        CoordenadaXCentroContorno = (x+x+w)/2
-	CoordenadaYCentroContorno = (y+y+h)/2
-        PontoCentralContorno = (CoordenadaXCentroContorno,CoordenadaYCentroContorno)
-        cv2.circle(Frame, PontoCentralContorno, 1, (0, 0, 0), 5)
+        #find object's centroid
+        CoordXCentroid = (x+x+w)/2
+        CoordYCentroid = (y+y+h)/2
+        ObjectCentroid = (CoordXCentroid,CoordYCentroid)
+        cv2.circle(Frame, ObjectCentroid, 1, (0, 0, 0), 5)
         
-        #testa interseccao dos centros dos contornos com as linhas de referencia
-        #dessa forma, contabiliza-se quais contornos cruzaram quais linhas (num determinado sentido)
-	if (TestaInterseccaoEntrada(CoordenadaYCentroContorno,CoordenadaYLinhaEntrada,CoordenadaYLinhaSaida)):
-            ContadorEntradas += 1
+        if (CheckEntranceLineCrossing(CoordYCentroid,CoorYEntranceLine,CoorYExitLine)):
+            EntranceCounter += 1
 
-	if (TestaInterseccaoSaida(CoordenadaYCentroContorno,CoordenadaYLinhaEntrada,CoordenadaYLinhaSaida)):  
-            ContadorSaidas += 1
+        if (CheckExitLineCrossing(CoordYCentroid,CoorYEntranceLine,CoorYExitLine)):  
+            ExitCounter += 1
 
-        #Se necessario, descomentar as lihas abaixo para mostrar os frames utilizados no processamento da imagem
-        #cv2.imshow("Frame binarizado", FrameThresh)
-        #cv2.waitKey(1);
-        #cv2.imshow("Frame com subtracao de background", FrameDelta)
-        #cv2.waitKey(1);
+    print "Total countours found: "+str(QttyOfContours)
 
-
-    print "Contornos encontrados: "+str(QtdeContornos)
-
-    #Escreve na imagem o numero de pessoas que entraram ou sairam da area vigiada
-    cv2.putText(Frame, "Entradas: {}".format(str(ContadorEntradas)), (10, 50),
+    #Write entrance and exit counter values on frame and shows it
+    cv2.putText(Frame, "Entrances: {}".format(str(EntranceCounter)), (10, 50),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (250, 0, 1), 2)
-    cv2.putText(Frame, "Saidas: {}".format(str(ContadorSaidas)), (10, 70),
+    cv2.putText(Frame, "Exits: {}".format(str(ExitCounter)), (10, 70),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-    cv2.imshow("Original", Frame)
+    cv2.imshow("Original Frame", Frame)
     cv2.waitKey(1);
 
 
