@@ -14,14 +14,14 @@ OffsetRefLines = 150  #Adjust this value according to your usage
 
 #Check if an object in entering in monitored zone
 def CheckEntranceLineCrossing(y, CoorYEntranceLine, CoorYExitLine):
-  AbsDistance = abs(y - CoorYEntranceLine)    
+    AbsDistance = abs(y - CoorYEntranceLine)    
 
-    if  ((AbsDistance <= 2) and (y < CoorYExitLine)):
-          return 1
+    if ((AbsDistance <= 2) and (y < CoorYExitLine)):
+        return 1
     else:
         return 0
 
-#Check if an object in exitting from monitored zone
+#Check if an object in exiting from monitored zone
 def CheckExitLineCrossing(y, CoorYEntranceLine, CoorYExitLine):
     AbsDistance = abs(y - CoorYExitLine)    
 
