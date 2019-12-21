@@ -2,6 +2,7 @@ import datetime
 import math
 import cv2
 import numpy as np
+import imutils
 
 #global variables
 width = 0
@@ -65,13 +66,16 @@ while True:
     
     #Dilate image and find all the contours
     FrameThresh = cv2.dilate(FrameThresh, None, iterations=2)
-    _, cnts, _ = cv2.findContours(FrameThresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    #_, cnts, _ = cv2.findContours(FrameThresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    cnts = cv2.findContours(FrameThresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cnts = imutils.grab_contours(cnts)
 
     QttyOfContours = 0
 
     #plot reference lines (entrance and exit lines) 
-    CoorYEntranceLine = (height / 2)-OffsetRefLines
-    CoorYExitLine = (height / 2)+OffsetRefLines
+    CoorYEntranceLine = round((height / 2)-OffsetRefLines) # rounded to get int value
+    CoorYExitLine = round((height / 2)+OffsetRefLines)
     cv2.line(Frame, (0,CoorYEntranceLine), (width,CoorYEntranceLine), (255, 0, 0), 2)
     cv2.line(Frame, (0,CoorYExitLine), (width,CoorYExitLine), (0, 0, 255), 2)
 
@@ -91,7 +95,7 @@ while True:
         #find object's centroid
         CoordXCentroid = (x+x+w)/2
         CoordYCentroid = (y+y+h)/2
-        ObjectCentroid = (CoordXCentroid,CoordYCentroid)
+        ObjectCentroid = (round(CoordXCentroid), round(CoordYCentroid)) # rounded to get int value
         cv2.circle(Frame, ObjectCentroid, 1, (0, 0, 0), 5)
         
         if (CheckEntranceLineCrossing(CoordYCentroid,CoorYEntranceLine,CoorYExitLine)):
