@@ -8,7 +8,7 @@ width = 0
 height = 0
 EntranceCounter = 0
 ExitCounter = 0
-MinCountourArea = 3000  #Adjust this value according to your usage
+MincontourArea = 3000  #Adjust this value according to your usage
 BinarizationThreshold = 70  #Adjust this value according to your usage
 OffsetRefLines = 150  #Adjust this value according to your usage
 
@@ -38,7 +38,7 @@ camera.set(4,480)
 
 ReferenceFrame = None
 
-#The webcam maybe get some time / captured frames to adapt to ambience lighting. For this reason, some frames are grabbed and discarted.
+#The webcam maybe get some time / captured frames to adapt to ambience lighting. For this reason, some frames are grabbed and discarded.
 for i in range(0,20):
     (grabbed, Frame) = camera.read()
 
@@ -76,15 +76,15 @@ while True:
     cv2.line(Frame, (0,CoorYExitLine), (width,CoorYExitLine), (0, 0, 255), 2)
 
 
-    #check all found countours
+    #check all found contours
     for c in cnts:
         #if a contour has small area, it'll be ignored
-        if cv2.contourArea(c) < MinCountourArea:
+        if cv2.contourArea(c) < MincontourArea:
             continue
 
         QttyOfContours = QttyOfContours+1    
 
-        #draw an rectangle "around" the object
+        #draw a rectangle "around" the object
         (x, y, w, h) = cv2.boundingRect(c)
         cv2.rectangle(Frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
@@ -100,7 +100,7 @@ while True:
         if (CheckExitLineCrossing(CoordYCentroid,CoorYEntranceLine,CoorYExitLine)):  
             ExitCounter += 1
 
-    print "Total countours found: "+str(QttyOfContours)
+    print ("Total contours found: " + str(QttyOfContours))
 
     #Write entrance and exit counter values on frame and shows it
     cv2.putText(Frame, "Entrances: {}".format(str(EntranceCounter)), (10, 50),
